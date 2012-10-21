@@ -47,7 +47,7 @@ public class TestCalculator {
 		for (int i = 0; i < 21; i++) { // 
 			c.hit(10);
 		}
-		assertThat(c.getScore(), is(290));
+		assertThat(c.getScore(), is(300));
 	}
 	
 	@Test
