@@ -1,105 +1,76 @@
 package lab2;
 
-import static org.mockito.Mockito.*;
-
 import java.math.BigDecimal;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.math.MathContext;
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
-
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
-import org.junit.Test;
-import org.laughingpanda.beaninject.Inject;
-import org.mockito.internal.verification.VerificationModeFactory;
+import java.util.List;
 
 public class InvoiceRowGenerator {
+	
+	private InvoiceRowDao invoiceRowDao;
 
-    @Test
-    public void calculateInvoiceRowSumTest() throws Exception {
-
-        InvoiceRowDao invoiceRowDao = mock(InvoiceRowDao.class);
-
-        InvoiceRowGenerator generator = new InvoiceRowGenerator();
-
-//        Inject.bean(generator).with(invoiceRowDao); // Throws exception
-
-        generator.generateRowsFor(10, asDate("2012-02-15"), asDate("2012-04-02"));
-
-        verify(invoiceRowDao, times(2)).save(argThat(getMatcherForSum(new BigDecimal(3))));
-        verify(invoiceRowDao).save(argThat(getMatcherForSum(new BigDecimal(4))));
-
-        // verify that there are no more calls
-    	verifyNoMoreInteractions(invoiceRowDao);
-    }
-    
-    @Test
-    public void calculateInvoiceRowDatesTest() throws Exception {
-    	InvoiceRowDao invoiceRowDao = mock(InvoiceRowDao.class);
-    	
-    	InvoiceRowGenerator generator = new InvoiceRowGenerator();
-    	
-//      Inject.bean(generator).with(invoiceRowDao); // Throws exception
-    	
-    	generator.generateRowsFor(10, asDate("2012-02-15"), asDate("2012-04-02"));
-    	
-    	// Should be enough to ensure that every date has only one Invoice row generated
-    	verify(invoiceRowDao).save(argThat(getMatcherForDate(asDate("2012-02-15"))));
-    	verify(invoiceRowDao).save(argThat(getMatcherForDate(asDate("2012-03-01"))));
-    	verify(invoiceRowDao).save(argThat(getMatcherForDate(asDate("2012-04-01"))));
-    	
-    	verifyNoMoreInteractions(invoiceRowDao);
-    }
-    
-    @Test
-    public void remainingSumTest() throws Exception {
-    	// TODO: !!
-    }
-
-    private Matcher<InvoiceRow> getMatcherForSum(final BigDecimal bigDecimal) {
-		return new BaseMatcher<InvoiceRow> () {
-
-			@Override
-			public boolean matches(Object arg0) {
-				InvoiceRow invoiceRow = (InvoiceRow) arg0;
-				return bigDecimal.equals(invoiceRow.amount);
+	public void generateRowsFor(int sum, Date start, Date end) {
+		List<Date> dates = getInvoiceDays(start, end);
+		int rows = dates.size();
+		if(sum <=3 || sum / rows < 3){
+			InvoiceRow row = new InvoiceRow(new BigDecimal(sum), dates.get(0));
+			invoiceRowDao.save(row);
+		}else{
+			BigDecimal[] divSum = getAmount(sum, rows);
+			for(int i = 0 ; i < rows-1; i++){
+				Date d = dates.get(i);
+				InvoiceRow row = new InvoiceRow(divSum[0], d);
+				invoiceRowDao.save(row);
 			}
-
-			@Override
-			public void describeTo(Description arg0) {
-				arg0.appendText("Sum does not match");				
-			}
-		};
+			BigDecimal last = divSum[1].add(divSum[0]);
+			InvoiceRow row = new InvoiceRow(last, dates.get(rows-1));
+			invoiceRowDao.save(row);
+		}
 	}
-    
-    private Matcher<InvoiceRow> getMatcherForDate(final Date date) {
-    	return new BaseMatcher<InvoiceRow> () {
-
-			@Override
-			public boolean matches(Object arg0) {
-				Date otherDate = (Date)arg0;
-				return date.equals(otherDate);
-			}
-
-			@Override
-			public void describeTo(Description arg0) {
-				arg0.appendText("Date does not match");				
-			}
-    		
-    	};
-    }
-
-	private void generateRowsFor(int i, Date asDate, Date asDate2) {
-		// TODO Auto-generated method stub
+	private BigDecimal[] getAmount(int sum, int rows){
+		BigDecimal[] divSum = new BigDecimal(sum).divideAndRemainder(new BigDecimal(rows), MathContext.DECIMAL128);
+		return divSum;
 	}
-
-	public static Date asDate(String date) {
-        try {
-            return new SimpleDateFormat("yyyy-MM-dd").parse(date);
-        } catch (ParseException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
+	
+	/*private int getMonthsBetweenDAtes(Date start, Date end){
+		Calendar c1 = Calendar.getInstance();
+		c1.setTime(start);
+		
+		Calendar c2 = Calendar.getInstance();
+		c2.setTime(end);
+		return (c2.get(Calendar.YEAR)- c1.get(Calendar.YEAR)) *12 + (c2.get(Calendar.MONTH)- c1.get(Calendar.MONTH)) +1;
+	}
+	*/
+	private List<Date> getInvoiceDays(Date start, Date end){
+		List<Date> res = new ArrayList<Date>();
+		res.add(start);
+		
+		Calendar c1 = Calendar.getInstance();
+		c1.setTime(start);
+		int startYear = c1.get(Calendar.YEAR);
+		int startMonth = c1.get(Calendar.MONTH);
+		
+		Calendar c2 = Calendar.getInstance();
+		c2.setTime(end);
+		int endYear = c2.get(Calendar.YEAR);
+		int endMonth = c2.get(Calendar.MONTH);
+		
+		Calendar tmp = Calendar.getInstance();
+		int cnt = 1;
+		while(true){
+			if((startYear + cnt / 12 == endYear) && (startMonth + cnt % 12 > endMonth)) {
+				break;
+			}
+			tmp.set(Calendar.YEAR, startYear + cnt / 12);
+			tmp.set(Calendar.MONTH, startMonth + cnt % 12);
+			tmp.set(Calendar.DAY_OF_MONTH, 1);
+			res.add(tmp.getTime());
+			cnt +=1;
+		}
+		
+		return res;
+	}
+	
 }
