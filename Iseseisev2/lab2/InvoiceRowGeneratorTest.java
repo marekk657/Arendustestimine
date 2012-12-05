@@ -42,7 +42,6 @@ public class InvoiceRowGeneratorTest {
     	InvoiceRowGenerator generator = new InvoiceRowGenerator();
     	
         Inject.bean(generator).with(invoiceRowDao); // Throws exception
-    	
     	generator.generateRowsFor(10, asDate("2012-02-15"), asDate("2012-04-02"));
     	
     	// Should be enough to ensure that every date has only one Invoice row generated
@@ -54,8 +53,46 @@ public class InvoiceRowGeneratorTest {
     }
     
     @Test
-    public void remainingSumTest() throws Exception {
-    	// TODO: !!
+    public void remainingSumTest_dividedCorrectly() throws Exception {
+    	InvoiceRowDao invoiceRowDao = mock(InvoiceRowDao.class);
+    	
+    	InvoiceRowGenerator generator = new InvoiceRowGenerator();
+    	
+    	Inject.bean(generator).with(invoiceRowDao); // Throws exception
+
+    	generator.generateRowsFor(9, asDate("2012-02-15"), asDate("2012-04-02"));
+
+    	verify(invoiceRowDao, times(3)).save(argThat(getMatcherForSum(new BigDecimal(3))));
+    	verifyNoMoreInteractions(invoiceRowDao);
+    }
+    
+    @Test
+    public void remainingSumTest_lessThanThree_returnsSum () throws Exception {
+    	InvoiceRowDao invoiceRowDao = mock(InvoiceRowDao.class);
+    	
+    	InvoiceRowGenerator generator = new InvoiceRowGenerator();
+    	
+    	Inject.bean(generator).with(invoiceRowDao); // Throws exception
+
+    	generator.generateRowsFor(2, asDate("2012-02-15"), asDate("2012-04-02"));
+    	
+    	verify(invoiceRowDao).save(argThat(getMatcherForSum(new BigDecimal(2))));
+    	verifyNoMoreInteractions(invoiceRowDao);
+    }
+    
+    @Test
+    public void remainingSumTest_sumsLastPayment () throws Exception {
+    	InvoiceRowDao invoiceRowDao = mock(InvoiceRowDao.class);
+    	
+    	InvoiceRowGenerator generator = new InvoiceRowGenerator();
+    	
+    	Inject.bean(generator).with(invoiceRowDao); // Throws exception
+
+    	generator.generateRowsFor(13, asDate("2012-02-15"), asDate("2012-04-02"));
+
+    	verify(invoiceRowDao, times(2)).save(argThat(getMatcherForSum(new BigDecimal(4))));
+    	verify(invoiceRowDao).save(argThat(getMatcherForSum(new BigDecimal(5))));
+    	verifyNoMoreInteractions(invoiceRowDao);
     }
 
     private Matcher<InvoiceRow> getMatcherForSum(final BigDecimal bigDecimal) {
