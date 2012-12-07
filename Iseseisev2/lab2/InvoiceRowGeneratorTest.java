@@ -128,13 +128,15 @@ public class InvoiceRowGeneratorTest {
 				rowCalendar.setTime(otherDate);
 				int rowDay = rowCalendar.get(Calendar.DAY_OF_MONTH);
 				int rowMonth = rowCalendar.get(Calendar.MONTH);
+				int rowYear = rowCalendar.get(Calendar.YEAR);
 				
 				Calendar checkCalendar = Calendar.getInstance();
 				checkCalendar.setTime(date);
 				int checkDay = checkCalendar.get(Calendar.DAY_OF_MONTH);
 				int checkMonth = checkCalendar.get(Calendar.MONTH);
+				int checkYear = checkCalendar.get(Calendar.YEAR);
 				
-				return rowDay == checkDay && rowMonth == checkMonth;
+				return rowDay == checkDay && rowMonth == checkMonth && rowYear == checkYear;
 			}
 
 			@Override
