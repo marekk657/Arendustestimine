@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 
 import org.hamcrest.BaseMatcher;
@@ -42,12 +43,14 @@ public class InvoiceRowGeneratorTest {
     	InvoiceRowGenerator generator = new InvoiceRowGenerator();
     	
         Inject.bean(generator).with(invoiceRowDao); // Throws exception
-    	generator.generateRowsFor(10, asDate("2012-02-15"), asDate("2012-04-02"));
+    	generator.generateRowsFor(15, asDate("2012-02-15"), asDate("2012-06-02"));
     	
     	// Should be enough to ensure that every date has only one Invoice row generated
     	verify(invoiceRowDao).save(argThat(getMatcherForDate(asDate("2012-02-15"))));
     	verify(invoiceRowDao).save(argThat(getMatcherForDate(asDate("2012-03-01"))));
     	verify(invoiceRowDao).save(argThat(getMatcherForDate(asDate("2012-04-01"))));
+    	verify(invoiceRowDao).save(argThat(getMatcherForDate(asDate("2012-05-01"))));
+    	verify(invoiceRowDao).save(argThat(getMatcherForDate(asDate("2012-06-01"))));
     	
     	verifyNoMoreInteractions(invoiceRowDao);
     }
@@ -66,6 +69,7 @@ public class InvoiceRowGeneratorTest {
     	verifyNoMoreInteractions(invoiceRowDao);
     }
     
+    
     @Test
     public void remainingSumTest_lessThanThree_returnsSum () throws Exception {
     	InvoiceRowDao invoiceRowDao = mock(InvoiceRowDao.class);
@@ -79,6 +83,7 @@ public class InvoiceRowGeneratorTest {
     	verify(invoiceRowDao).save(argThat(getMatcherForSum(new BigDecimal(2))));
     	verifyNoMoreInteractions(invoiceRowDao);
     }
+    
     
     @Test
     public void remainingSumTest_sumsLastPayment () throws Exception {
@@ -117,9 +122,19 @@ public class InvoiceRowGeneratorTest {
 
 			@Override
 			public boolean matches(Object arg0) {
-				InvoiceRow invoiceRow = (InvoiceRow) arg0;
-				Date otherDate = invoiceRow.date;
-				return date.equals(otherDate);
+				
+				Date otherDate = ((InvoiceRow)arg0).date;
+				Calendar rowCalendar = Calendar.getInstance();
+				rowCalendar.setTime(otherDate);
+				int rowDay = rowCalendar.get(Calendar.DAY_OF_MONTH);
+				int rowMonth = rowCalendar.get(Calendar.MONTH);
+				
+				Calendar checkCalendar = Calendar.getInstance();
+				checkCalendar.setTime(date);
+				int checkDay = checkCalendar.get(Calendar.DAY_OF_MONTH);
+				int checkMonth = checkCalendar.get(Calendar.MONTH);
+				
+				return rowDay == checkDay && rowMonth == checkMonth;
 			}
 
 			@Override
